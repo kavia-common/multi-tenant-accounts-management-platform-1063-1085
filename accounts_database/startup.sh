@@ -96,7 +96,7 @@ sudo mysql --socket=/var/run/mysqld/mysqld.sock << EOF
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD}';
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Create a new user for remote connections
 CREATE USER IF NOT EXISTS 'appuser'@'%' IDENTIFIED BY '${DB_PASSWORD}';
@@ -107,6 +107,23 @@ GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO 'root'@'localhost';
 
 FLUSH PRIVILEGES;
 EOF
+
+# Apply schema and seed
+if [ -f "schema.sql" ]; then
+  echo "Applying database schema..."
+  sudo mysql --socket=/var/run/mysqld/mysqld.sock -u root -p${DB_PASSWORD} ${DB_NAME} < schema.sql
+  echo "✓ Schema applied"
+else
+  echo "⚠ schema.sql not found, skipping schema application"
+fi
+
+if [ -f "seed.sql" ]; then
+  echo "Applying seed data..."
+  sudo mysql --socket=/var/run/mysqld/mysqld.sock -u root -p${DB_PASSWORD} ${DB_NAME} < seed.sql
+  echo "✓ Seed data applied"
+else
+  echo "ℹ seed.sql not found, skipping seed data"
+fi
 
 # Save connection command to a file
 echo "mysql -u ${DB_USER} -p${DB_PASSWORD} -h localhost -P ${DB_PORT} ${DB_NAME}" > db_connection.txt
