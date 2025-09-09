@@ -121,6 +121,24 @@ export MYSQL_DB="${DB_NAME}"
 export MYSQL_PORT="${DB_PORT}"
 EOF
 
+# Apply contacts schema
+echo "Applying contacts management schema..."
+if [ -f "schema_contacts.sql" ]; then
+  sudo mysql --socket=/var/run/mysqld/mysqld.sock -u root -p${DB_PASSWORD} ${DB_NAME} < schema_contacts.sql
+  echo "✓ Contacts schema applied."
+else
+  echo "⚠ schema_contacts.sql not found; skipping schema application."
+fi
+
+# Install seed stored procedure (available cluster-wide, executed in DB context)
+echo "Installing seed procedure for default categories..."
+if [ -f "seed_contacts.sql" ]; then
+  sudo mysql --socket=/var/run/mysqld/mysqld.sock -u root -p${DB_PASSWORD} ${DB_NAME} < seed_contacts.sql
+  echo "✓ Seed procedure installed."
+else
+  echo "⚠ seed_contacts.sql not found; skipping seed procedure install."
+fi
+
 echo "MySQL setup complete!"
 echo "Database: ${DB_NAME}"
 echo "Root user: root (password: ${DB_PASSWORD})"
@@ -137,3 +155,6 @@ echo "$(cat db_connection.txt)"
 echo ""
 echo "MySQL is running in the background."
 echo "You can now start your application."
+echo ""
+echo "Note: To seed default contact categories for a tenant, execute:"
+echo "  mysql -u ${DB_USER} -p${DB_PASSWORD} -h localhost -P ${DB_PORT} ${DB_NAME} -e \"CALL seed_default_contact_categories(<tenant_id>, NULL);\""
